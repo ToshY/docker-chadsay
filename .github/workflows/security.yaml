@@ -1,0 +1,35 @@
+name: Security check
+
+on:
+  schedule:
+    - cron: '30 2 * * 0'
+  workflow_dispatch:
+
+env:
+  IMAGE_REPOSITORY: toshy/docker-chadsay
+
+jobs:
+  check:
+    name: Image security check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build an image from Dockerfile
+        run: docker buildx build -t ${{ env.IMAGE_REPOSITORY }}:${{ github.sha }} .
+
+      - name: Trivy Scan - Unknown, Low, Medium and High Severity
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          image-ref: ${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}
+          severity: UNKNOWN,LOW,MEDIUM,HIGH
+          exit-code: 0
+
+      - name: Trivy Scan - Critical Severity
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          image-ref: ${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}
+          ignore-unfixed: true
+          severity: CRITICAL
+          exit-code: 1
